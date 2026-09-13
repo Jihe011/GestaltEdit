@@ -13,7 +13,7 @@
   <a href="https://github.com/frs0n/GestaltEdit/releases/latest"><img src="https://img.shields.io/github/v/release/frs0n/GestaltEdit?style=flat-square&label=release&color=6E56CF" alt="Latest release"></a>
   <a href="https://github.com/frs0n/GestaltEdit/releases"><img src="https://img.shields.io/github/downloads/frs0n/GestaltEdit/total?style=flat-square&label=downloads&color=6E56CF" alt="Downloads"></a>
   <a href="https://github.com/frs0n/GestaltEdit/stargazers"><img src="https://img.shields.io/github/stars/frs0n/GestaltEdit?style=flat-square&color=6E56CF" alt="Stars"></a>
-  <img src="https://img.shields.io/badge/iOS%20%7C%20iPadOS-27-000000?style=flat-square&logo=apple&logoColor=white" alt="Platform">
+  <img src="https://img.shields.io/badge/iOS%20%7C%20iPadOS-26%20%2F%2027-000000?style=flat-square&logo=apple&logoColor=white" alt="Platform">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/frs0n/GestaltEdit?style=flat-square&color=6E56CF" alt="MIT License"></a>
 </p>
 
@@ -67,12 +67,12 @@ Importing only copies a file into GestaltEdit's backup library; it does not imme
 
 ## Requirements and signing
 
-- Supported system versions: iOS and iPadOS 27 beta 1 through beta 4 only
+- Supported system versions: iOS and iPadOS 26.5.2 (experimental) and iOS/iPadOS 27 beta 1 through beta 4
 - A way to sign and install the IPA, such as [iLoader](https://github.com/nab138/iloader)
 - Developer Mode enabled on the device
 - Bundle identifier: `me.ssus.gestaltedit`
 
-GestaltEdit checks the running system build before accessing MobileGestalt. The current release accepts iOS and iPadOS 27 beta 1–4 (24A5355q, 24A5370h, 24A5380h, and 24A5390f), plus the revised iPadOS beta 3 build 24A5380i. Apple may change these private behaviors at any time.
+GestaltEdit checks the running system build before accessing MobileGestalt. The current release accepts iOS and iPadOS 26.5.2 (build 23F84) — experimental, pending on-device verification — plus iOS and iPadOS 27 beta 1–4 (24A5355q, 24A5370h, 24A5380h, and 24A5390f), plus the revised iPadOS beta 3 build 24A5380i. Apple may change these private behaviors at any time.
 
 ## Installing with iLoader
 

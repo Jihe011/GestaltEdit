@@ -13,7 +13,7 @@
   <a href="https://github.com/frs0n/GestaltEdit/releases/latest"><img src="https://img.shields.io/github/v/release/frs0n/GestaltEdit?style=flat-square&label=release&color=6E56CF" alt="最新版本"></a>
   <a href="https://github.com/frs0n/GestaltEdit/releases"><img src="https://img.shields.io/github/downloads/frs0n/GestaltEdit/total?style=flat-square&label=downloads&color=6E56CF" alt="下载量"></a>
   <a href="https://github.com/frs0n/GestaltEdit/stargazers"><img src="https://img.shields.io/github/stars/frs0n/GestaltEdit?style=flat-square&color=6E56CF" alt="Stars"></a>
-  <img src="https://img.shields.io/badge/iOS%20%7C%20iPadOS-27-000000?style=flat-square&logo=apple&logoColor=white" alt="支持平台">
+  <img src="https://img.shields.io/badge/iOS%20%7C%20iPadOS-26%20%2F%2027-000000?style=flat-square&logo=apple&logoColor=white" alt="支持平台">
   <a href="LICENSE"><img src="https://img.shields.io/github/license/frs0n/GestaltEdit?style=flat-square&color=6E56CF" alt="MIT 许可证"></a>
 </p>
 
@@ -67,12 +67,12 @@ GestaltEdit 是一款直接在 iPhone 和 iPad 上运行的 MobileGestalt 工具
 
 ## 系统要求与签名
 
-- 支持的系统版本：仅 iOS 与 iPadOS 27 beta 1 至 beta 4
+- 支持的系统版本：iOS 与 iPadOS 26.5.2（实验性），以及 iOS/iPadOS 27 beta 1 至 beta 4
 - 一种可以对 IPA 进行签名并安装的方式，例如 [iLoader](https://github.com/nab138/iloader)
 - 设备已开启开发者模式
 - Bundle identifier：`me.ssus.gestaltedit`
 
-GestaltEdit 在访问 MobileGestalt 前会检查当前系统版本号。当前版本接受 iOS 与 iPadOS 27 beta 1–4（24A5355q、24A5370h、24A5380h、24A5390f），以及 iPadOS beta 3 的修订版本 24A5380i。Apple 随时可能改变这些私有行为。
+GestaltEdit 在访问 MobileGestalt 前会检查当前系统版本号。当前版本接受 iOS 与 iPadOS 26.5.2（build 23F84，实验性，尚未经真机验证），以及 iOS 与 iPadOS 27 beta 1–4（24A5355q、24A5370h、24A5380h、24A5390f）和 iPadOS beta 3 的修订版本 24A5380i。Apple 随时可能改变这些私有行为。
 
 ## 使用 iLoader 签名安装
 
