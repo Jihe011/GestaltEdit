@@ -194,10 +194,10 @@ static char *BadQuerySweepVariants(
                     rejected++;
                 } else {
                     noToken++;
-                    [acceptedLines appendFormat:
+                    [acceptedLines addObject:[NSString stringWithFormat:
                         @"part %llu flags %#llx prefix %@ -> no token",
                         (unsigned long long)part, (unsigned long long)flags,
-                        BadQueryPrefixLabel(prefix)];
+                        BadQueryPrefixLabel(prefix)]];
                 }
             }
         }
