@@ -1,20 +1,13 @@
-name: Release unsigned IPA
+name: Test build unsigned IPA
 
 on:
-  push:
-    tags:
-      - "v*"
   workflow_dispatch:
 
 permissions:
-  contents: write
-
-concurrency:
-  group: unsigned-release-${{ github.ref }}
-  cancel-in-progress: false
+  contents: read
 
 jobs:
-  release:
+  build:
     runs-on: macos-latest
     timeout-minutes: 30
 
@@ -47,13 +40,11 @@ jobs:
             "$RUNNER_TEMP/GestaltEdit.xcarchive/Products/Applications/GestaltEdit.app" \
             "$RUNNER_TEMP/Payload/"
           cd "$RUNNER_TEMP"
-          zip -qry "GestaltEdit-${GITHUB_REF_NAME//\//-}-unsigned.ipa" Payload
+          zip -qry "GestaltEdit-test-unsigned.ipa" Payload
 
-      - name: Publish GitHub release
-        if: github.event_name == 'push'
-        uses: softprops/action-gh-release@v3
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: GestaltEdit ${{ github.ref_name }}
-          generate_release_notes: true
-          fail_on_unmatched_files: true
-          files: ${{ runner.temp }}/GestaltEdit-${{ github.ref_name }}-unsigned.ipa
+          name: GestaltEdit-test-unsigned-ipa
+          path: ${{ runner.temp }}/GestaltEdit-test-unsigned.ipa
+          if-no-files-found: error
